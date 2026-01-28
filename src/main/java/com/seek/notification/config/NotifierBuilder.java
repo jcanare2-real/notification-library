@@ -1,41 +1,69 @@
 package com.seek.notification.config;
 
-import com.seek.notification.providers.NotificationProvider;
 import com.seek.notification.core.NotificationManager;
+import com.seek.notification.events.NotificationListener;
+import com.seek.notification.providers.NotificationProvider;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Motor de configuración programática para la librería.
+ * MOTOR DE CONFIGURACIÓN (Fluent Builder).
+ * * Patrones aplicados:
+ * 1. Builder: Facilita la creación de un objeto complejo (NotificationManager) paso a paso.
+ * * SOLID:
+ * - OCP: Permite extender la librería con nuevos providers y listeners sin modificar esta clase.
  */
 public class NotifierBuilder {
     private final List<NotificationProvider<?>> providers = new ArrayList<>();
+    private final List<NotificationListener> listeners = new ArrayList<>();
     private int threadPoolSize = Runtime.getRuntime().availableProcessors();
 
     /**
-     * Registra un nuevo proveedor (ej: SendGrid, Mailgun) de forma dinámica.
+     * Registra un proveedor de canal (Email, SMS, Push).
+     * Puedes llamar a este método múltiples veces para registrar distintos proveedores.
      */
     public NotifierBuilder withProvider(NotificationProvider<?> provider) {
-        if (provider == null) throw new IllegalArgumentException("El proveedor no puede ser nulo");
+        if (provider == null) {
+            throw new IllegalArgumentException("El proveedor no puede ser nulo");
+        }
         this.providers.add(provider);
         return this;
     }
 
     /**
-     * Configura el tamaño del pool para envíos asíncronos.
+     * Registra un suscriptor para escuchar los eventos de éxito o fallo (Pub/Sub).
+     * Útil para auditoría, métricas o persistencia en base de datos.
+     */
+    public NotifierBuilder withEventListener(NotificationListener listener) {
+        if (listener == null) {
+            throw new IllegalArgumentException("El listener no puede ser nulo");
+        }
+        this.listeners.add(listener);
+        return this;
+    }
+
+    /**
+     * Configura el tamaño del pool de hilos para el procesamiento asíncrono.
+     * Por defecto usa el número de procesadores disponibles.
      */
     public NotifierBuilder withThreadPoolSize(int size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("El tamaño del pool debe ser mayor a cero");
+        }
         this.threadPoolSize = size;
         return this;
     }
 
     /**
-     * Construye la instancia final del manager con todos los proveedores registrados.
+     * Construye la instancia final del NotificationManager.
+     * Realiza validaciones de integridad antes de la creación.
      */
     public NotificationManager build() {
         if (providers.isEmpty()) {
-            throw new IllegalStateException("Se debe configurar al menos un proveedor antes de construir el manager");
+            throw new IllegalStateException("Se debe configurar al menos un proveedor (Provider) antes de construir el manager");
         }
-        return new NotificationManager(providers, threadPoolSize);
+
+        // Inyectamos las dependencias coleccionadas al constructor del Manager (Dependency Injection manual)
+        return new NotificationManager(providers, listeners, threadPoolSize);
     }
 }
