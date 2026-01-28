@@ -3,6 +3,9 @@ package com.seek.notification.config;
 import com.seek.notification.core.NotificationManager;
 import com.seek.notification.events.NotificationListener;
 import com.seek.notification.providers.NotificationProvider;
+import com.seek.notification.retry.RetryPolicy;
+import com.seek.notification.retry.RetryingProviderDecorator;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -65,5 +68,12 @@ public class NotifierBuilder {
 
         // Inyectamos las dependencias coleccionadas al constructor del Manager (Dependency Injection manual)
         return new NotificationManager(providers, listeners, threadPoolSize);
+    }
+
+    public NotifierBuilder withResilientProvider(NotificationProvider<?> provider, RetryPolicy policy) {
+        // Aplicamos el patrón Decorator antes de guardar el proveedor
+        var resilientProvider = new RetryingProviderDecorator<>(provider, policy);
+        this.providers.add(resilientProvider);
+        return this;
     }
 }
