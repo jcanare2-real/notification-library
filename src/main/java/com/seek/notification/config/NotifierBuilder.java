@@ -1,7 +1,7 @@
 package com.seek.notification.config;
 
 import com.seek.notification.providers.NotificationProvider;
-//import com.seek.notification.core.NotificationManager;
+import com.seek.notification.core.NotificationManager;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,10 +32,10 @@ public class NotifierBuilder {
     /**
      * Construye la instancia final del manager con todos los proveedores registrados.
      */
-//    public NotificationManager build() {
-//        if (providers.isEmpty()) {
-//            throw new IllegalStateException("Se debe configurar al menos un proveedor antes de construir el manager");
-//        }
-//        return new NotificationManager(providers, threadPoolSize);
-//    }
+    public NotificationManager build() {
+        if (providers.isEmpty()) {
+            throw new IllegalStateException("Se debe configurar al menos un proveedor antes de construir el manager");
+        }
+        return new NotificationManager(providers, threadPoolSize);
+    }
 }
