@@ -3,8 +3,9 @@ package com.seek.notification.config;
 import com.seek.notification.core.NotificationManager;
 import com.seek.notification.events.NotificationListener;
 import com.seek.notification.providers.NotificationProvider;
-import com.seek.notification.retry.RetryPolicy;
-import com.seek.notification.retry.RetryingProviderDecorator;
+import com.seek.notification.validation.NotificationValidator;
+import com.seek.notification.validation.impl.EmailValidator;
+import com.seek.notification.validation.impl.SmsValidator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,68 +13,74 @@ import java.util.List;
 /**
  * MOTOR DE CONFIGURACIÓN (Fluent Builder).
  * * Patrones aplicados:
- * 1. Builder: Facilita la creación de un objeto complejo (NotificationManager) paso a paso.
+ * 1. Builder: Facilita la construcción del NotificationManager inyectando todas las piezas.
+ * 2. Dependency Injection: Se realiza de forma manual para mantener el agnosticismo.
  * * SOLID:
- * - OCP: Permite extender la librería con nuevos providers y listeners sin modificar esta clase.
+ * - OCP: El usuario puede añadir sus propios validadores o proveedores sin modificar la lib.
  */
 public class NotifierBuilder {
     private final List<NotificationProvider<?>> providers = new ArrayList<>();
     private final List<NotificationListener> listeners = new ArrayList<>();
+    private final List<NotificationValidator<?>> validators = new ArrayList<>();
     private int threadPoolSize = Runtime.getRuntime().availableProcessors();
 
+    public NotifierBuilder() {
+        // Cargamos validadores por defecto para asegurar la integridad básica
+        this.validators.add(new EmailValidator());
+        this.validators.add(new SmsValidator());
+    }
+
     /**
-     * Registra un proveedor de canal (Email, SMS, Push).
-     * Puedes llamar a este método múltiples veces para registrar distintos proveedores.
+     * Registra un proveedor de envío (SendGrid, Twilio, etc.).
      */
     public NotifierBuilder withProvider(NotificationProvider<?> provider) {
-        if (provider == null) {
-            throw new IllegalArgumentException("El proveedor no puede ser nulo");
-        }
+        if (provider == null) throw new IllegalArgumentException("Provider no puede ser nulo");
         this.providers.add(provider);
         return this;
     }
 
     /**
-     * Registra un suscriptor para escuchar los eventos de éxito o fallo (Pub/Sub).
-     * Útil para auditoría, métricas o persistencia en base de datos.
+     * Registra un observador para auditoría y tracking de estados.
      */
     public NotifierBuilder withEventListener(NotificationListener listener) {
-        if (listener == null) {
-            throw new IllegalArgumentException("El listener no puede ser nulo");
-        }
+        if (listener == null) throw new IllegalArgumentException("Listener no puede ser nulo");
         this.listeners.add(listener);
         return this;
     }
 
     /**
-     * Configura el tamaño del pool de hilos para el procesamiento asíncrono.
-     * Por defecto usa el número de procesadores disponibles.
+     * Permite añadir validadores personalizados o sobreescribir los existentes.
+     */
+    public NotifierBuilder withValidator(NotificationValidator<?> validator) {
+        if (validator == null) throw new IllegalArgumentException("Validator no puede ser nulo");
+        this.validators.add(validator);
+        return this;
+    }
+
+    /**
+     * Define el nivel de concurrencia para el envío asíncrono.
      */
     public NotifierBuilder withThreadPoolSize(int size) {
-        if (size <= 0) {
-            throw new IllegalArgumentException("El tamaño del pool debe ser mayor a cero");
-        }
+        if (size <= 0) throw new IllegalArgumentException("Pool size debe ser positivo");
         this.threadPoolSize = size;
         return this;
     }
 
     /**
-     * Construye la instancia final del NotificationManager.
-     * Realiza validaciones de integridad antes de la creación.
+     * Ensamblaje final.
+     * @return Instancia configurada de NotificationManager.
      */
     public NotificationManager build() {
         if (providers.isEmpty()) {
-            throw new IllegalStateException("Se debe configurar al menos un proveedor (Provider) antes de construir el manager");
+            throw new IllegalStateException("Se requiere al menos un Provider para operar.");
         }
 
-        // Inyectamos las dependencias coleccionadas al constructor del Manager (Dependency Injection manual)
-        return new NotificationManager(providers, listeners, threadPoolSize);
-    }
-
-    public NotifierBuilder withResilientProvider(NotificationProvider<?> provider, RetryPolicy policy) {
-        // Aplicamos el patrón Decorator antes de guardar el proveedor
-        var resilientProvider = new RetryingProviderDecorator<>(provider, policy);
-        this.providers.add(resilientProvider);
-        return this;
+        // Fusión de todas las dependencias en el orquestador
+        return new NotificationManager(
+                providers,
+                listeners,
+                validators,
+                threadPoolSize
+        );
     }
 }
