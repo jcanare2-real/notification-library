@@ -13,12 +13,10 @@ class EmailValidatorTest {
     private final EmailValidator validator = new EmailValidator();
 
     @Test
-    @DisplayName("Debe lanzar excepción si el email no tiene formato correcto")
+    @DisplayName("Debe fallar al intentar instanciar un email con formato inválido")
     void shouldFailOnInvalidEmail() {
-        EmailNotification invalidEmail = new EmailNotification("formato-incorrecto", "Sub", "Body");
-
-        assertThrows(NotificationValidationException.class, () -> {
-            validator.validate(invalidEmail);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new EmailNotification("formato-incorrecto", "Sub", "Body");
         });
     }
 }
