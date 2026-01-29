@@ -27,8 +27,6 @@ Diseño escalable y desacoplado:
     <version>1.0.0</version>
 </dependency>
 ```
-
-
 ***
 
 ## ⚡ Quick Start
@@ -66,14 +64,15 @@ public class Main {
 ***
 
 ## 🔄 Resiliencia con Retry Policy
-
-`var retryPolicy = new ExponentialBackoffRetry(3, 1000);
+```java
+var retryPolicy = new ExponentialBackoffRetry(3, 1000);
 var resilientSms = new RetryingProviderDecorator<>(
     new TwilioSmsProvider("SID", "TOKEN"), 
     retryPolicy
 );
-managerBuilder.withProvider(resilientSms);`
 
+managerBuilder.withProvider(resilientSms);
+```
 ***
 
 ## 📡 Proveedores Soportados
